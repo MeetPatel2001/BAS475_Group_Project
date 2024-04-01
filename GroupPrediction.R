@@ -3,6 +3,7 @@ library(plotly)
 library(lubridate)
 library(tidyr)
 library(zoo)
+library(dplyr)
 library(forecast)
 
 
@@ -32,12 +33,26 @@ cleaned_df <- cleaned_df %>%
 cleaned_df %>% 
   autoplot(total)
 
-# fill NA's using Linear interpolation
+# Fill NA's
+# Method-1 Linear interpolation
 cleaned_df <- cleaned_df %>% 
   mutate(total =  na.approx(total))
 
 cleaned_df %>% 
   autoplot(total)
+
+# Method-2 exponential smoothing -get same result as linear interpolation!?
+# Remove non-numeric values
+cleaned_df <- cleaned_df %>%
+  filter(!is.na(as.numeric(total)))
+
+# Perform interpolation
+cleaned_df_1 <- cleaned_df %>%
+  mutate(total = forecast::na.interp(total, "spline"))
+
+cleaned_df_1 %>% 
+  autoplot(total)
+
 
 
 # transformation- trend and seasonality are now Additive
@@ -46,8 +61,9 @@ lambda <- guerrero(cleaned_df$total, .period = 12)
 cleaned_df %>%
   autoplot(box_cox(total, lambda))
 
-cleaned_df <- cleaned_df %>% 
+cleaned_df <- cleaned_df %>%
   mutate(total = box_cox(total, lambda))
+
 
 # train and test data filtering
 train_df <- cleaned_df %>% 
