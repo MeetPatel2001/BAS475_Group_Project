@@ -43,26 +43,26 @@ cleaned_df %>%
 
 # Method-2 exponential smoothing -get same result as linear interpolation!?
 # Remove non-numeric values
-cleaned_df <- cleaned_df %>%
-  filter(!is.na(as.numeric(total)))
+# cleaned_df <- cleaned_df %>%
+#   filter(!is.na(as.numeric(total)))
+# 
+# # Perform interpolation
+# cleaned_df_1 <- cleaned_df %>%
+#   mutate(total = forecast::na.interp(total, "spline"))
+# 
+# cleaned_df_1 %>% 
+#   autoplot(total)
+# 
 
-# Perform interpolation
-cleaned_df_1 <- cleaned_df %>%
-  mutate(total = forecast::na.interp(total, "spline"))
 
-cleaned_df_1 %>% 
-  autoplot(total)
-
-
-
-# transformation- trend and seasonality are now Additive
+# transformation- trend and seasonality are now Additive- apply directly to model
 lambda <- guerrero(cleaned_df$total, .period = 12)
-
+ 
 cleaned_df %>%
   autoplot(box_cox(total, lambda))
 
-cleaned_df <- cleaned_df %>%
-  mutate(total = box_cox(total, lambda))
+# cleaned_df <- cleaned_df %>%
+#   mutate(total = box_cox(total, lambda))
 
 
 # train and test data filtering
@@ -75,34 +75,31 @@ test_df <- cleaned_df %>%
 
 # Model 1- seasonal naive
 train_df %>% 
-  model(SNAIVE(total)) %>% 
+  model(SNAIVE(box_cox(total, lambda))) %>% 
   forecast(h = "1 year", level = NULL) %>% 
   autoplot(cleaned_df)
 
 
 # Model 2- Seasonal naive with drift
 fit <- train_df %>%
-  model(SNAIVE(total ~ drift()))
+  model(SNAIVE(box_cox(total, lambda) ~ drift()))
 
 fit %>%
   forecast(h = "1 year") %>%
   autoplot(cleaned_df, level = NULL)
 
-# fit_fc <- fit %>% 
-#   forecast(h = "1 year")
-# 
-# accuracy(fit_fc, cleaned_df)
 
 
 # Model 3- Applying all simple models
 fit <- train_df %>% 
   model(
-    Mean = MEAN(total),
-    `Naïve` = NAIVE(total),
-    `Seasonal naive` = SNAIVE(total),
-    Drift = RW(total ~ drift()), 
-    Drift_with_Snaive = SNAIVE(total ~ drift())
+    Mean = MEAN(box_cox(total, lambda)),
+    `Naïve` = NAIVE(box_cox(total, lambda)),
+    `Seasonal naive` = SNAIVE(box_cox(total, lambda)),
+    Drift = RW(box_cox(total, lambda) ~ drift()), 
+    Drift_with_Snaive = SNAIVE(box_cox(total, lambda) ~ drift())
   )
+
 
 fit %>%
   forecast(h = "1 year") %>%
@@ -123,8 +120,35 @@ fit_fc %>%
 accuracy(fit_fc, cleaned_df)
 
 
-# can i untransform the accurary directly ??
-accurary_untransform <- accuracy(fit_fc, cleaned_df)
+# Model 4- ETS and TSLM
+fit <- train_df %>% 
+  model(
+    ets = ETS(box_cox(total, lambda)), 
+    tslm = TSLM(box_cox(total, lambda)~ trend() + season())
+  )
+
+fit_fc <- fit %>% 
+  forecast(h = "1 year") 
+
+fit_fc %>% 
+  autoplot( train_df,level = NULL) +
+  labs(
+    y = "Total Reviews",
+    title = "Forecasts for Total Reviews"
+  ) +
+  guides(colour = guide_legend(title = "Forecast"))
+
+# Plot to check forecast line along with original
+# fit %>%
+#   forecast(h = "1 year") %>%
+#   autoplot(cleaned_df, level = NULL)
+
+# find the best model
+accuracy(fit_fc, cleaned_df)
+
+
+
+
 
 
 
