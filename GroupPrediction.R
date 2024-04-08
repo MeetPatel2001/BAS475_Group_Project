@@ -41,18 +41,7 @@ cleaned_df <- cleaned_df %>%
 cleaned_df %>% 
   autoplot(total)
 
-# Method-2 exponential smoothing -get same result as linear interpolation!?
-# Remove non-numeric values
-# cleaned_df <- cleaned_df %>%
-#   filter(!is.na(as.numeric(total)))
-# 
-# # Perform interpolation
-# cleaned_df_1 <- cleaned_df %>%
-#   mutate(total = forecast::na.interp(total, "spline"))
-# 
-# cleaned_df_1 %>% 
-#   autoplot(total)
-# 
+# Method-2 arima
 
 
 # transformation- trend and seasonality are now Additive- apply directly to model
@@ -147,9 +136,40 @@ fit_fc %>%
 accuracy(fit_fc, cleaned_df)
 
 
+# Models Using Cross Validation
+
+# Drift with CV
+df_cv <- train_df %>% 
+  stretch_tsibble(.init = 10, .step = 5) 
+
+df_cv %>% 
+  model(RW(total ~ drift())) %>% 
+  forecast(h = 1) %>% 
+  accuracy(cleaned_df)
 
 
+# ETS with CV
+df_cv %>% 
+  model(
+    ets = ETS(box_cox(total, lambda)), 
+    tslm = TSLM(box_cox(total, lambda)~ trend() + season())
+  ) %>% 
+  forecast(h = 1) %>% 
+  accuracy(cleaned_df)
 
+# same as above code but broken-down
+fit <- df_cv %>% 
+  model(
+    ets = ETS(box_cox(total, lambda)), 
+    tslm = TSLM(box_cox(total, lambda)~ trend() + season())
+  ) 
 
+fit_fc <- fit %>%
+  forecast(h = 1)
+
+fit_fc %>% 
+  accuracy(cleaned_df)
+
+# Lowest RMSE of 509 with EST and CV
 
 
