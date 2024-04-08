@@ -173,3 +173,50 @@ fit_fc %>%
 # Lowest RMSE of 509 with EST and CV
 
 
+
+# Final CSV
+
+df_cv <- cleaned_df %>% 
+  stretch_tsibble(.init = 10, .step = 5) 
+
+fit_fc <- df_cv %>% 
+  model(RW(total ~ drift())) %>% 
+  forecast(h = "13 months") 
+
+
+# ETS with CV
+
+# ets and tslm
+df_cv %>% 
+  model(
+    ets = ETS(box_cox(total, lambda)), 
+    tslm = TSLM(box_cox(total, lambda)~ trend() + season())
+  ) %>% 
+  forecast(h = "13 months") 
+
+
+# same as above code but broken-down
+fit_fc <- df_cv %>% 
+  model(ETS(box_cox(total, lambda))) %>% 
+  forecast(h = "13 months") 
+
+colnames(fit_fc)
+
+final_csv <- data_frame(fit_fc$year_month, fit_fc$.mean)
+
+final_csv <- final_csv %>%
+  rename(month = `fit_fc$year_month`,
+         n_reviews = `fit_fc$.mean`)
+
+# Plot
+plot <- ggplot(final_csv, aes(x = month, y = n_reviews)) +
+  geom_line() +
+  labs(x = "Month", y = "Number of Reviews", title = "Monthly Reviews Trend") 
+
+ggplotly(plot)
+
+final_csv <- final_csv %>% 
+  tail(12)
+
+write.csv(final_csv, "final_data.csv", row.names = FALSE)
+
