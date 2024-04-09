@@ -19,7 +19,6 @@ df <- df %>%
 #   ggplotly()
 
 # make change here- clean the df by removing the drop due to covid and 
-# replace it with linear interpolation- probably.
 cleaned_df = df
 
 # Convert year_month to Date format to remove covid drop
@@ -41,8 +40,6 @@ cleaned_df <- cleaned_df %>%
 cleaned_df %>% 
   autoplot(total)
 
-# Method-2 arima
-
 
 # transformation- trend and seasonality are now Additive- apply directly to model
 lambda <- guerrero(cleaned_df$total, .period = 12)
@@ -57,6 +54,11 @@ cleaned_df %>%
 # train and test data filtering
 train_df <- cleaned_df %>% 
   filter_index(. ~ "Nov 2021")
+
+train_df %>% 
+  autoplot() %>% 
+  ggplotly()
+
 
 test_df <- cleaned_df %>% 
   filter_index("Dec 2021" ~ .)
@@ -138,75 +140,38 @@ accuracy(fit_fc, cleaned_df)
 
 # Models Using Cross Validation
 
-# Drift with CV
+# Drift, ets, tslm, snaive with CV
 df_cv <- train_df %>% 
-  stretch_tsibble(.init = 10, .step = 5) 
+  stretch_tsibble(.init = 10*12, .step = 12) 
 
-df_cv %>% 
-  model(RW(total ~ drift())) %>% 
-  forecast(h = 1) %>% 
-  accuracy(cleaned_df)
-
-
-# ETS with CV
-df_cv %>% 
-  model(
-    ets = ETS(box_cox(total, lambda)), 
-    tslm = TSLM(box_cox(total, lambda)~ trend() + season())
-  ) %>% 
-  forecast(h = 1) %>% 
-  accuracy(cleaned_df)
-
-# same as above code but broken-down
 fit <- df_cv %>% 
-  model(
-    ets = ETS(box_cox(total, lambda)), 
-    tslm = TSLM(box_cox(total, lambda)~ trend() + season())
-  ) 
+  model(drift = RW(total ~ drift()),
+        ets = ETS(box_cox(total, lambda)), 
+        tslm = TSLM(box_cox(total, lambda)~ trend() + season()),
+        snaive = SNAIVE(box_cox(total, lambda)))%>% 
+  forecast(h = 1) 
 
-fit_fc <- fit %>%
-  forecast(h = 1)
-
-fit_fc %>% 
+fit %>% 
   accuracy(cleaned_df)
 
-# Lowest RMSE of 509 with EST and CV
+
+# Lowest RMSE of 358 with EST and CV
 
 
+# Final ETS model and create CSV
 
-# Final CSV
-
-df_cv <- cleaned_df %>% 
-  stretch_tsibble(.init = 10, .step = 5) 
-
-fit_fc <- df_cv %>% 
-  model(RW(total ~ drift())) %>% 
-  forecast(h = "13 months") 
-
-
-# ETS with CV
-
-# ets and tslm
-df_cv %>% 
-  model(
-    ets = ETS(box_cox(total, lambda)), 
-    tslm = TSLM(box_cox(total, lambda)~ trend() + season())
-  ) %>% 
-  forecast(h = "13 months") 
-
-
-# same as above code but broken-down
-fit_fc <- df_cv %>% 
+fit_fc <- cleaned_df %>% 
   model(ETS(box_cox(total, lambda))) %>% 
-  forecast(h = "13 months") 
+  forecast(h = "12 months") 
+
+fit_fc
 
 colnames(fit_fc)
 
-final_csv <- data_frame(fit_fc$year_month, fit_fc$.mean)
+final_csv <- data_frame(month = fit_fc$year_month, n_reviews = fit_fc$.mean)
 
-final_csv <- final_csv %>%
-  rename(month = `fit_fc$year_month`,
-         n_reviews = `fit_fc$.mean`)
+# final_csv %>% 
+#   autoplot(cleaned_df)
 
 # Plot
 plot <- ggplot(final_csv, aes(x = month, y = n_reviews)) +
@@ -215,8 +180,5 @@ plot <- ggplot(final_csv, aes(x = month, y = n_reviews)) +
 
 ggplotly(plot)
 
-final_csv <- final_csv %>% 
-  tail(12)
-
-write.csv(final_csv, "final_data.csv", row.names = FALSE)
+write.csv(final_csv, "Group_Predictions.csv", row.names = FALSE)
 
