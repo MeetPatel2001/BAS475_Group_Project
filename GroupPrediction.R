@@ -47,9 +47,6 @@ lambda <- guerrero(cleaned_df$total, .period = 12)
 cleaned_df %>%
   autoplot(box_cox(total, lambda))
 
-# cleaned_df <- cleaned_df %>%
-#   mutate(total = box_cox(total, lambda))
-
 
 # train and test data filtering
 train_df <- cleaned_df %>% 
@@ -140,7 +137,7 @@ accuracy(fit_fc, cleaned_df)
 
 # Models Using Cross Validation
 
-# Drift, ets, tslm, snaive with CV
+# Drift, ets, tslm, snaive with CV- Final model selection!
 df_cv <- train_df %>% 
   stretch_tsibble(.init = 10*12, .step = 12) 
 
@@ -148,18 +145,25 @@ fit <- df_cv %>%
   model(drift = RW(total ~ drift()),
         ets = ETS(box_cox(total, lambda)), 
         tslm = TSLM(box_cox(total, lambda)~ trend() + season()),
-        snaive = SNAIVE(box_cox(total, lambda)))%>% 
-  forecast(h = 1) 
+        snaive = SNAIVE(box_cox(total, lambda))) %>% 
+  forecast(h = "1 year")
 
 fit %>% 
   accuracy(cleaned_df)
 
 
-# Lowest RMSE of 358 with EST and CV
+fit <- train_df %>% 
+  model(drift = RW(total ~ drift()),
+        ets = ETS(box_cox(total, lambda)), 
+        tslm = TSLM(box_cox(total, lambda)~ trend() + season()),
+        snaive = SNAIVE(box_cox(total, lambda)))%>% 
+  forecast(h = "1 year")
+
+fit %>% 
+  accuracy(test_df)
 
 
 # Final ETS model and create CSV
-
 fit_fc <- cleaned_df %>% 
   model(ETS(box_cox(total, lambda))) %>% 
   forecast(h = "12 months") 
