@@ -137,7 +137,7 @@ accuracy(fit_fc, cleaned_df)
 
 # Models Using Cross Validation
 
-# Drift, ets, tslm, snaive with CV- Final model selection!
+# Drift, ets, tslm, snaive, arima with CV- Final model selection!
 df_cv <- train_df %>% 
   stretch_tsibble(.init = 10*12, .step = 12) 
 
@@ -145,7 +145,8 @@ fit <- df_cv %>%
   model(drift = RW(total ~ drift()),
         ets = ETS(box_cox(total, lambda)), 
         tslm = TSLM(box_cox(total, lambda)~ trend() + season()),
-        snaive = SNAIVE(box_cox(total, lambda))) %>% 
+        snaive = SNAIVE(box_cox(total, lambda)),
+        arima = ARIMA(box_cox(total, lambda))) %>% 
   forecast(h = "1 year")
 
 fit %>% 
@@ -156,19 +157,20 @@ fit <- train_df %>%
   model(drift = RW(total ~ drift()),
         ets = ETS(box_cox(total, lambda)), 
         tslm = TSLM(box_cox(total, lambda)~ trend() + season()),
-        snaive = SNAIVE(box_cox(total, lambda)))%>% 
+        snaive = SNAIVE(box_cox(total, lambda)),
+        arima = ARIMA(box_cox(total, lambda))) %>% 
   forecast(h = "1 year")
 
 fit %>% 
   accuracy(test_df)
 
 
-# Final ETS model and create CSV
+# Final ARIMA model and create CSV
 fit_fc <- cleaned_df %>% 
-  model(ETS(box_cox(total, lambda))) %>% 
+  model(ARIMA(box_cox(total, lambda))) %>% 
   forecast(h = "12 months") 
 
-fit_fc
+#fit_fc
 
 colnames(fit_fc)
 
@@ -183,6 +185,9 @@ plot <- ggplot(final_csv, aes(x = month, y = n_reviews)) +
   labs(x = "Month", y = "Number of Reviews", title = "Monthly Reviews Trend") 
 
 ggplotly(plot)
+
+fit_fc %>% 
+  autoplot(cleaned_df)
 
 write.csv(final_csv, "Group_Predictions.csv", row.names = FALSE)
 
