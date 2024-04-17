@@ -146,26 +146,32 @@ fit <- df_cv %>%
         ets = ETS(box_cox(total, lambda)), 
         tslm = TSLM(box_cox(total, lambda)~ trend() + season()),
         snaive = SNAIVE(box_cox(total, lambda)),
-        arima = ARIMA(box_cox(total, lambda))) %>% 
-  forecast(h = "1 year")
+        arima = ARIMA(box_cox(total, lambda)))
 
-fit %>% 
-  accuracy(cleaned_df)
+# Using filter because it's predicting two extra values which are not in train dataset.
+fit_fc <- fit %>% 
+  forecast(h = "1 year") %>% 
+  filter(year_month <= yearmonth("2021 Nov"))
 
 
+fit_fc %>% 
+  accuracy(train_df) %>% 
+  arrange(RMSE)
+
+# ARIMA is the best model!
+
+# fitting model to train data
 fit <- train_df %>% 
-  model(drift = RW(total ~ drift()),
-        ets = ETS(box_cox(total, lambda)), 
-        tslm = TSLM(box_cox(total, lambda)~ trend() + season()),
-        snaive = SNAIVE(box_cox(total, lambda)),
-        arima = ARIMA(box_cox(total, lambda))) %>% 
+  model(arima = ARIMA(box_cox(total, lambda))) 
+
+fit_fc <- fit %>% 
   forecast(h = "1 year")
 
-fit %>% 
-  accuracy(test_df)
+fit_fc %>% 
+  accuracy(test_df) 
 
 
-# Final ARIMA model and create CSV
+# Final ARIMA model trained on all data and create final predictions (CSV)
 fit_fc <- cleaned_df %>% 
   model(ARIMA(box_cox(total, lambda))) %>% 
   forecast(h = "12 months") 
