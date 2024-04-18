@@ -146,7 +146,8 @@ fit <- df_cv %>%
         ets = ETS(box_cox(total, lambda)), 
         tslm = TSLM(box_cox(total, lambda)~ trend() + season()),
         snaive = SNAIVE(box_cox(total, lambda)),
-        arima = ARIMA(box_cox(total, lambda)))
+        arima = ARIMA(box_cox(total, lambda)), 
+        Drift_with_Snaive = SNAIVE(box_cox(total, lambda) ~ drift()))
 
 # Using filter because it's predicting two extra values which are not in train dataset.
 fit_fc <- fit %>% 
@@ -165,7 +166,7 @@ fit <- train_df %>%
   model(arima = ARIMA(box_cox(total, lambda))) 
 
 fit_fc <- fit %>% 
-  forecast(h = "1 year")
+  forecast(h = "1 year", times=0)
 
 fit_fc %>% 
   accuracy(test_df) 
