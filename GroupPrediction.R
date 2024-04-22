@@ -5,6 +5,8 @@ library(tidyr)
 library(zoo)
 library(dplyr)
 library(forecast)
+library(fable.prophet)
+library(Rcpp)
 
 
 df <- read.csv("Group Project (Reviews)/total_reviews.csv")
@@ -141,13 +143,16 @@ accuracy(fit_fc, cleaned_df)
 df_cv <- train_df %>% 
   stretch_tsibble(.init = 10*12, .step = 12) 
 
-fit <- df_cv %>% 
+
+fit <- df_cv %>%
   model(drift = RW(total ~ drift()),
-        ets = ETS(box_cox(total, lambda)), 
+        ets = ETS(box_cox(total, lambda)),
         tslm = TSLM(box_cox(total, lambda)~ trend() + season()),
         snaive = SNAIVE(box_cox(total, lambda)),
-        arima = ARIMA(box_cox(total, lambda)), 
+        arima = ARIMA(box_cox(total, lambda)),
         Drift_with_Snaive = SNAIVE(box_cox(total, lambda) ~ drift()))
+
+
 
 # Using filter because it's predicting two extra values which are not in train dataset.
 fit_fc <- fit %>% 
@@ -159,11 +164,19 @@ fit_fc %>%
   accuracy(train_df) %>% 
   arrange(RMSE)
 
-# ARIMA is the best model!
+
+fit_fc %>% 
+  accuracy(train_df) %>% 
+  arrange(RMSE) %>% 
+  select(.model, RMSE)
+
+# Prophet is the best model!
 
 # fitting model to train data
 fit <- train_df %>% 
-  model(arima = ARIMA(box_cox(total, lambda))) 
+  model(arima = ARIMA(box_cox(total, lambda)))
+
+gg_tsresiduals(fit)
 
 fit_fc <- fit %>% 
   forecast(h = "1 year", times=0)
