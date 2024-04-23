@@ -43,6 +43,18 @@ cleaned_df %>%
   autoplot(total)
 
 
+# perform worse with tslm   
+# cleaned_df <- cleaned_df %>%
+#   # Fit ARIMA model to the data containing missing values
+#   model(TSLM(total~ trend() + season())) %>%
+#   # Estimate Trips for all periods
+#   interpolate(cleaned_df)
+
+
+cleaned_df %>% 
+  autoplot(total)
+
+
 # transformation- trend and seasonality are now Additive- apply directly to model
 lambda <- guerrero(cleaned_df$total, .period = 12)
  
