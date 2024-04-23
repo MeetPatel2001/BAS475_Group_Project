@@ -230,6 +230,7 @@ plot <- ggplot(final_csv, aes(x = month, y = n_reviews)) +
 
 ggplotly(plot)
 
+# plot
 fit_fc %>% 
   autoplot(cleaned_df)
 
