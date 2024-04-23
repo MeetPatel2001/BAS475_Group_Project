@@ -8,7 +8,7 @@ library(forecast)
 library(fable.prophet)
 library(Rcpp)
 
-
+# reading the data
 df <- read.csv("Group Project (Reviews)/total_reviews.csv")
 
 df <- df %>% 
@@ -35,7 +35,7 @@ cleaned_df %>%
   autoplot(total)
 
 # Fill NA's
-# Method-1 Linear interpolation
+# Linear interpolation to fill covid gap
 cleaned_df <- cleaned_df %>% 
   mutate(total =  na.approx(total))
 
@@ -43,7 +43,7 @@ cleaned_df %>%
   autoplot(total)
 
 
-# perform worse with tslm   
+# all models worse with tslm gap filling 
 # cleaned_df <- cleaned_df %>%
 #   # Fit ARIMA model to the data containing missing values
 #   model(TSLM(total~ trend() + season())) %>%
