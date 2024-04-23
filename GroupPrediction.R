@@ -145,12 +145,20 @@ df_cv <- train_df %>%
 
 
 fit <- df_cv %>%
-  model(drift = RW(total ~ drift()),
-        ets = ETS(box_cox(total, lambda)),
-        tslm = TSLM(box_cox(total, lambda)~ trend() + season()),
-        snaive = SNAIVE(box_cox(total, lambda)),
-        arima = ARIMA(box_cox(total, lambda)),
-        Drift_with_Snaive = SNAIVE(box_cox(total, lambda) ~ drift()))
+  model(drift_bc = RW(box_cox(total, lambda) ~ drift()),
+        ets_bc = ETS(box_cox(total, lambda)),
+        tslm_bc = TSLM(box_cox(total, lambda)~ trend() + season()),
+        snaive_bc = SNAIVE(box_cox(total, lambda)),
+        arima_bc = ARIMA(box_cox(total, lambda)),
+        Drift_with_Snaive_bc = SNAIVE(box_cox(total, lambda) ~ drift()),
+        prophet_bc = prophet(box_cox(total, lambda)),
+        drift = RW(total ~ drift()),
+        ets = ETS(total),
+        tslm = TSLM(total~ trend() + season()),
+        snaive = SNAIVE(total),
+        arima = ARIMA(total),
+        Drift_with_Snaive = SNAIVE(total ~ drift()),
+        prophet = prophet(total))
 
 
 
@@ -174,7 +182,7 @@ fit_fc %>%
 
 # fitting model to train data
 fit <- train_df %>% 
-  model(arima = ARIMA(box_cox(total, lambda)))
+  model(prophet = prophet(total))
 
 gg_tsresiduals(fit)
 
@@ -185,9 +193,13 @@ fit_fc %>%
   accuracy(test_df) 
 
 
-# Final ARIMA model trained on all data and create final predictions (CSV)
+# Final prophet model trained on all data and create final predictions (CSV)
 fit_fc <- cleaned_df %>% 
-  model(ARIMA(box_cox(total, lambda))) %>% 
+  model(prophet(total)) %>%  #model(ARIMA(box_cox(total, lambda))) %>% 
+  forecast(h = "12 months") 
+
+fit_fc <- cleaned_df %>% 
+  model(prophet(total)) %>% 
   forecast(h = "12 months") 
 
 #fit_fc
